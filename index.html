@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AegisHer — Women's Safety Concept Simulator</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+    }
+    .pulse-ring {
+      animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulseRing {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(1.06); }
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    @media (max-width: 640px) {
+      html, body { max-width: 100%; overflow-x: clip; }
+      main { min-width: 0; }
+      .evidence-actions { max-width: 100%; }
+      .tab-panel, .tab-panel > *, .tab-panel section { min-width: 0; }
+    }
+    .evidence-table td { word-break: normal; overflow-wrap: normal; hyphens: none; }
+    .evidence-table td.hash-cell, .evidence-table td.timestamp-cell { white-space: nowrap; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-rose-500 selection:text-white">
+
+  <!-- Top Navigation Bar -->
+  <header class="sticky top-0 z-30 min-w-0 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex min-w-0 items-center gap-3">
+        <div class="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-rose-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-rose-500/20">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-bold tracking-tight text-white">AegisHer</h1>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">Safety Concept Simulator</span>
+          </div>
+          <p class="text-xs text-slate-400 break-words">Simulated sensor fusion, illustrative routing & local demo alerts</p>
+        </div>
+      </div>
+
+      <!-- Status Pill & Quick SOS -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div id="globalStatusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+          <span id="globalStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+          <span id="globalStatusText">DEMO SIMULATION • 14% RISK</span>
+        </div>
+
+        <button id="audioBeaconBtn" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-200 transition flex items-center gap-1.5">
+          <span id="audioBeaconLabel">🔇 Local Tone Off</span>
+        </button>
+
+        <button id="instantSosBtn" type="button" class="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white text-xs font-bold tracking-wide uppercase shadow-lg shadow-rose-600/30 transition">
+          🚨 Simulate SOS
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-7xl mx-auto mt-3 flex items-center gap-1 overflow-x-auto pb-1">
+      <button type="button" data-tab="telemetry" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition whitespace-nowrap">
+        1. Sensor Input Simulator
+      </button>
+      <button type="button" data-tab="corridor" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 transition whitespace-nowrap">
+        2. Illustrative Streetlight Mesh
+      </button>
+      <button type="button" data-tab="guardians" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 transition whitespace-nowrap">
+        3. Sample Contacts (No Auto-Dispatch)
+      </button>
+      <button type="button" data-tab="evidence" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 transition whitespace-nowrap">
+        4. SHA-256 Demo Ledger (<span id="evidenceCountBadge">3</span>)
+      </button>
+    </div>
+  </header>
+
+  <!-- Toast Banner -->
+  <div id="toastBanner" class="hidden fixed bottom-5 right-5 z-50 max-w-sm bg-slate-900 border border-indigo-500/50 text-slate-100 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+    <span id="toastIcon" class="text-lg">✅</span>
+    <p id="toastMessage" class="text-xs font-medium leading-relaxed"></p>
+  </div>
+
+  <!-- Safety disclosure: this prototype is not connected to real responders or hardware. -->
+  <div role="status" aria-live="polite" class="mx-auto w-full max-w-7xl px-4 pt-4">
+    <div class="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-200">
+      <strong>DEMO ONLY:</strong> Sensor readings, GPS, contacts, route scores, streetlights, and emergency dispatch are simulated. No real alert, phone call, message, location share, or hardware command is sent. Do not rely on this prototype during an emergency.
+    </div>
+  </div>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+
+    <!-- Top KPI Row -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="min-w-0 bg-slate-900/90 border border-slate-800 rounded-xl p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-slate-400">Rule-based Demo Risk Score</span>
+          <span class="text-xs px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300 font-semibold">Rule-based Demo</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="kpiThreatScore" class="text-2xl sm:text-3xl font-extrabold text-emerald-400">14%</span>
+          <span id="kpiThreatLabel" class="text-xs text-slate-400">Low Risk</span>
+        </div>
+        <div class="mt-2 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+          <div id="kpiThreatBar" class="bg-emerald-500 h-full transition-all duration-300" style="width: 14%"></div>
+        </div>
+      </div>
+
+      <div class="min-w-0 bg-slate-900/90 border border-slate-800 rounded-xl p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-slate-400">Wearable Sensor Simulator</span>
+          <span id="bleBatteryBadge" class="text-xs px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-semibold">94% Batt</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="kpiHeartRate" class="text-2xl sm:text-3xl font-extrabold text-white">76 <span class="text-sm font-normal text-slate-400">BPM</span></span>
+          <span id="kpiGForce" class="text-xs text-indigo-300">1.02 G</span>
+        </div>
+        <p class="mt-1.5 text-xs text-slate-400">Node ID: <code class="text-slate-300">AEGIS-BLE-09X</code></p>
+      </div>
+
+      <div class="min-w-0 bg-slate-900/90 border border-slate-800 rounded-xl p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-slate-400">Sample Street Nodes</span>
+          <span class="text-xs px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 font-semibold">Simulated Node Mesh</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="kpiActiveNodes" class="text-2xl sm:text-3xl font-extrabold text-cyan-400">6 / 6</span>
+          <span class="text-xs text-slate-400">Active Nodes</span>
+        </div>
+        <p id="kpiCorridorLux" class="mt-1.5 text-xs text-slate-400">Avg Corridor Illumination: 88 Lux</p>
+      </div>
+
+      <div class="min-w-0 bg-slate-900/90 border border-slate-800 rounded-xl p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-slate-400">Hash-linked Demo Evidence</span>
+          <span class="text-xs px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 font-semibold">SHA-256 Demo Chain</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="kpiEvidenceCount" class="text-2xl sm:text-3xl font-extrabold text-purple-300">3</span>
+          <span class="text-xs text-slate-400">Hashed Demo Events</span>
+        </div>
+        <p id="kpiLastPacketTime" class="mt-1.5 text-xs text-slate-400">Demo hash logged on ≥75% risk</p>
+      </div>
+    </section>
+
+    <!-- TAB 1: IoT Wearable & AI Sensor Fusion -->
+    <section id="tab-telemetry" class="tab-panel space-y-6">
+      <!-- Scenario Presets Bar -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-sm font-bold text-white">Interactive Sensor Simulator & Scenario Testing</h2>
+          <p class="text-xs text-slate-400">Adjust simulated heart-rate, motion, audio-level, and lighting inputs to explore a rule-based risk score. No live wearable or acoustic classifier is connected.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" data-preset="normal" class="preset-btn px-3 py-1.5 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/30 text-xs font-semibold transition">
+            🟢 Normal Commute
+          </button>
+          <button type="button" data-preset="stalking" class="preset-btn px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 text-xs font-semibold transition">
+            🟡 Dark Alley + High Pulse
+          </button>
+          <button type="button" data-preset="impact" class="preset-btn px-3 py-1.5 rounded-lg bg-rose-600/20 border border-rose-500/40 text-rose-300 hover:bg-rose-600/30 text-xs font-semibold transition">
+            🔴 Sudden Grab / Fall (Demo SOS)
+          </button>
+          <button type="button" id="deviceMotionBtn" class="px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 text-xs font-semibold transition">
+            📱 Read Browser Motion Sensor
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Interactive Sensor Sliders -->
+        <div class="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-xl p-5 space-y-5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-sm font-bold text-white">Wearable Node Controls</h3>
+            <span class="text-xs text-slate-400">Adjust to test AI Fusion</span>
+          </div>
+
+          <!-- Heart Rate Slider -->
+          <div>
+            <div class="flex justify-between text-xs font-medium mb-1.5">
+              <label for="sliderHeartRate" class="text-slate-300">Simulated Heart Rate (BPM)</label>
+              <span id="valHeartRate" class="text-rose-400 font-bold">76 BPM</span>
+            </div>
+            <input id="sliderHeartRate" type="range" min="55" max="185" value="76" class="w-full accent-rose-500 cursor-pointer" />
+            <div class="flex justify-between text-[11px] text-slate-500 mt-1">
+              <span>Resting (60)</span>
+              <span>Elevated (115)</span>
+              <span>Panic Spike (160+)</span>
+            </div>
+          </div>
+
+          <!-- Accelerometer Impact Slider -->
+          <div>
+            <div class="flex justify-between text-xs font-medium mb-1.5">
+              <label for="sliderGForce" class="text-slate-300">Motion Input (G-Force; demo slider)</label>
+              <span id="valGForce" class="text-indigo-400 font-bold">1.0 G</span>
+            </div>
+            <input id="sliderGForce" type="range" min="10" max="65" value="10" class="w-full accent-indigo-500 cursor-pointer" />
+            <div class="flex justify-between text-[11px] text-slate-500 mt-1">
+              <span>1.0G (Walking)</span>
+              <span>2.8G (Running)</span>
+              <span>4.5G+ (Struggle/Fall)</span>
+            </div>
+          </div>
+
+          <!-- Audio Distress Decibels -->
+          <div>
+            <div class="flex justify-between text-xs font-medium mb-1.5">
+              <label for="sliderAudioDb" class="text-slate-300">Ambient Audio Level (dB; demo slider)</label>
+              <span id="valAudioDb" class="text-amber-400 font-bold">48 dB</span>
+            </div>
+            <input id="sliderAudioDb" type="range" min="35" max="115" value="48" class="w-full accent-amber-500 cursor-pointer" />
+            <div class="flex justify-between text-[11px] text-slate-500 mt-1">
+              <span>Quiet (40 dB)</span>
+              <span>Street (70 dB)</span>
+              <span>Scream/Distress (95+ dB)</span>
+            </div>
+          </div>
+
+          <!-- Streetlight Illumination -->
+          <div>
+            <div class="flex justify-between text-xs font-medium mb-1.5">
+              <label for="sliderLux" class="text-slate-300">Streetlight Level (Lux; demo slider)</label>
+              <span id="valLux" class="text-cyan-400 font-bold">85 Lux</span>
+            </div>
+            <input id="sliderLux" type="range" min="2" max="120" value="85" class="w-full accent-cyan-500 cursor-pointer" />
+            <div class="flex justify-between text-[11px] text-slate-500 mt-1">
+              <span>Dead Zone (5 Lux)</span>
+              <span>Dim (35 Lux)</span>
+              <span>Bright Corridor (100 Lux)</span>
+            </div>
+          </div>
+
+          <!-- Voice Keyword Trigger -->
+          <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold text-white">Manual Wake-word Simulation ("Help / Bachao")</p>
+              <p class="text-[11px] text-slate-400">Demo toggle only; no microphone or TinyML model is connected</p>
+            </div>
+            <button id="toggleVoiceTriggerBtn" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 transition">
+              Demo Wake-word: Inactive
+            </button>
+          </div>
+        </div>
+
+        <!-- Simulated Telemetry Chart & Risk Breakdown -->
+        <div class="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-white">Simulated Multi-Sensor Telemetry</h3>
+              <p class="text-xs text-slate-400">Client-side rule calculation using manually adjusted demo inputs</p>
+            </div>
+            <button id="logSnapshotBtn" type="button" class="px-3 py-1.5 rounded-lg bg-purple-600/20 border border-purple-500/40 text-purple-300 hover:bg-purple-600/30 text-xs font-semibold transition">
+              🔒 Hash Telemetry Packet
+            </button>
+          </div>
+
+          <!-- Chart Container with fixed height -->
+          <div class="relative h-64 w-full">
+            <canvas id="telemetryChart"></canvas>
+          </div>
+
+          <!-- Explainable AI Weights Box -->
+          <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3.5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-200">Explainable AI Threat Formula Breakdown</span>
+              <span id="aiDecisionBadge" class="text-xs font-semibold text-emerald-400">Status: Demo monitoring</span>
+            </div>
+            <p id="aiFormulaExplanation" class="text-xs text-slate-400 leading-relaxed">
+              Biometric pulse (76 BPM) and motion (1.0 G) are within normal walking baselines. The sample lighting input is currently 85 Lux.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: Smart Streetlight Mesh & Safe Corridor Radar -->
+    <section id="tab-corridor" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-8 bg-slate-900/90 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-bold text-white">Illustrative Streetlight Mesh & Route Simulator</h2>
+              <p class="text-xs text-slate-400">Click a sample node to toggle its simulated state. This is not a live streetlight network or validated route planner.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="routeModeSafeBtn" type="button" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold transition">
+                🛡️ Illustrative Lit Route (Active)
+              </button>
+              <button id="routeModeFastBtn" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-semibold transition">
+                ⚡ Shortest Dark Alley Route
+              </button>
+            </div>
+          </div>
+
+          <div class="relative w-full bg-slate-950 rounded-xl border border-slate-800 overflow-hidden" style="height: 360px;">
+            <canvas id="meshRadarCanvas" class="w-full h-full cursor-pointer"></canvas>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400 pt-1">
+            <div class="flex items-center gap-4">
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span> Active Sample Light Node</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> Outage / Dark Hazard Zone</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span> Sample Safe-Haven Marker (Not Verified)</span>
+            </div>
+            <span id="radarClickHint" class="text-indigo-300 font-medium">Tip: Click any node circle to simulate a streetlight failure</span>
+          </div>
+        </div>
+
+        <div class="lg:col-span-4 bg-slate-900/90 border border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4">
+          <div class="space-y-4">
+            <h3 class="text-sm font-bold text-white border-b border-slate-800 pb-2.5">Corridor Telemetry Comparison</h3>
+
+            <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-emerald-300">Illustrative Safe-Lit Route</span>
+                <span id="safeRouteScore" class="text-xs font-extrabold text-emerald-400">96% Demo Score</span>
+              </div>
+              <p class="text-xs text-slate-300">Distance: <strong>1.4 km</strong> (16 mins walk) • Illustrative demo coverage only; not independently verified</p>
+              <p class="text-[11px] text-slate-400">Sample points only; no safe haven or responder availability has been verified</p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-rose-300">Illustrative Shortest Route</span>
+                <span class="text-xs font-extrabold text-rose-400">41% Demo Score</span>
+              </div>
+              <p class="text-xs text-slate-300">Distance: <strong>1.1 km</strong> (13 mins walk) • 2 unlit dead-zones detected</p>
+              <p class="text-[11px] text-slate-400"> saves 3 mins but crosses Sector-4 unlit service lane (8 Lux)</p>
+            </div>
+
+            <div class="space-y-2 pt-2">
+              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">IoT Streetlight Nodes (Click to Toggle)</h4>
+              <div id="nodeListContainer" class="space-y-2 max-h-44 overflow-y-auto pr-1"></div>
+            </div>
+          </div>
+
+          <button id="boostStreetlightsBtn" type="button" class="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition shadow-lg shadow-cyan-600/25">
+            💡 Simulate Streetlight Brightness Boost
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: Sample Contacts & Emergency Payload Preview -->
+    <section id="tab-guardians" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Guardian Contacts List + Add Form -->
+        <div class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h2 class="text-sm font-bold text-white">Sample Contact List (Not Connected)</h2>
+              <p class="text-xs text-slate-400">Demo contacts only. No SMS, calls, GPS sharing, or responder dispatch occurs.</p>
+            </div>
+          </div>
+
+          <div id="guardiansList" class="space-y-2.5"></div>
+
+          <!-- Add New Guardian Form -->
+          <form id="addGuardianForm" class="pt-3 border-t border-slate-800 space-y-3">
+            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Add Trusted Contact</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input id="inputGuardianName" type="text" placeholder="Full Name" required class="px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500" />
+              <input id="inputGuardianRelation" type="text" placeholder="Role (optional)" class="px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500" />
+              <input id="inputGuardianPhone" type="tel" placeholder="Phone (optional)" class="px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500" />
+            </div>
+            <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+              + Add Sample Contact
+            </button>
+          </form>
+        </div>
+
+        <!-- Demo Emergency Payload Preview -->
+        <div class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h2 class="text-sm font-bold text-white">Simulated Emergency Payload Preview</h2>
+                <p class="text-xs text-slate-400">Preview only — no SMS, WhatsApp, or police integration is configured</p>
+              </div>
+              <span id="dispatchStatusPill" class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-semibold">Demo only — not sent</span>
+            </div>
+
+            <pre id="sosPayloadPreview" class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-emerald-300 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto"></pre>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 pt-2">
+            <button id="copySosPayloadBtn" type="button" class="flex-1 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition">
+              📋 Copy Demo Payload Preview
+            </button>
+            <button id="simulateFakeCallBtn" type="button" class="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold transition">
+              📞 Preview Scripted Demo Call
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: SHA-256 Hash-linked Demo Evidence Ledger -->
+    <section id="tab-evidence" class="tab-panel hidden space-y-6">
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="text-sm font-bold text-white">Cryptographic SHA-256 Demo Evidence Chain</h2>
+            <p class="text-xs text-slate-400">Each demo event is hashed locally. This browser-only ledger is editable, not externally anchored, digitally signed, or suitable as legal evidence.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 evidence-actions">
+            <button id="manualRecordEvidenceBtn" type="button" class="px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition">
+              + Capture & Hash Current Telemetry
+            </button>
+            <button id="exportEvidenceJsonBtn" type="button" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold transition">
+              ⬇️ Copy JSON Ledger
+            </button>
+          </div>
+        </div>
+
+        <div class="max-w-full overflow-x-auto">
+          <table class="evidence-table w-full min-w-[840px] text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase">
+                <th class="py-2.5 px-3">Block #</th>
+                <th class="py-2.5 px-3">Timestamp (UTC)</th>
+                <th class="py-2.5 px-3">Trigger Event</th>
+                <th class="py-2.5 px-3">Sensor Snapshot</th>
+                <th class="py-2.5 px-3 text-right">Threat Score</th>
+                <th class="py-2.5 px-3">SHA-256 Integrity Hash</th>
+              </tr>
+            </thead>
+            <tbody id="evidenceTableBody" class="divide-y divide-slate-800/70 text-xs"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Scripted Demo Call Modal -->
+  <div id="fakeCallModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xs w-full p-6 text-center space-y-5 shadow-2xl">
+      <div class="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 mx-auto flex items-center justify-center text-2xl pulse-ring">
+        🚔
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-widest text-emerald-400 font-bold">Scripted Demo Call Preview</p>
+        <h3 class="text-lg font-extrabold text-white mt-1">Sample Caller</h3>
+        <p class="text-xs text-slate-400 mt-0.5">No live location shared • No audio recorded</p>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-left text-xs text-slate-300 leading-relaxed">
+        "This is a scripted interface preview. No one can see your location and no patrol unit has been contacted."
+      </div>
+      <button id="closeFakeCallBtn" type="button" class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition">
+        End Deterrent Call
+      </button>
+    </div>
+  </div>
+
+  <script src="./sha256.js"></script>
+  <script src="./evidence-ledger.js"></script>
+  <script>
+    // Application State
+    const appState = {
+      activeTab: 'telemetry',
+      heartRate: 76,
+      gForce: 1.0,
+      audioDb: 48,
+      lux: 85,
+      voiceWakeWord: false,
+      threatScore: 14,
+      sosActive: false,
+      criticalIncidentLogged: false,
+      sirenEnabled: false,
+      routeMode: 'safe',
+      streetNodes: [
+        { id: 'NODE-A1', name: 'University Gate Pole #1', x: 0.18, y: 0.75, active: true, lux: 95 },
+        { id: 'NODE-A2', name: 'Apollo 24/7 Pharmacy Light', x: 0.36, y: 0.32, active: true, lux: 110 },
+        { id: 'NODE-A3', name: 'Metro Boulevard Smart Pole', x: 0.58, y: 0.25, active: true, lux: 92 },
+        { id: 'NODE-A4', name: 'Police Booth Junction #4', x: 0.78, y: 0.38, active: true, lux: 105 },
+        { id: 'NODE-B1', name: 'Sector-4 Service Alley (Dim)', x: 0.45, y: 0.68, active: false, lux: 8 },
+        { id: 'NODE-B2', name: 'Warehouse Backlane Node', x: 0.68, y: 0.72, active: true, lux: 65 }
+      ],
+      guardians: [
+        { id: 1, name: 'Demo Guardian 1', relation: 'Sample contact', phone: 'Not configured', status: 'Demo only' },
+        { id: 2, name: 'Demo Response Desk', relation: 'Sample responder', phone: 'Not connected', status: 'Demo only' },
+        { id: 3, name: 'Demo Guardian 2', relation: 'Sample contact', phone: 'Not configured', status: 'Demo only' }
+      ],
+      evidenceLedger: [
+        {
+          block: 103,
+          timestamp: "2026-11-10 05:41:50 UTC",
+          event: "Illustrative route marker added",
+          snapshot: "76 BPM | 1.0G | 48 dB | 85 Lux",
+          score: 14,
+          previousHash: "b4f991f11950187ea3edb716d7f74b1b7e2ecf343ed988a57c6ae08ab2672818",
+          hash: "219c01917213a7ab4b3f4eb5d0633b9b40f63d78105866e987eaf33793f19f6c"
+        },
+        {
+          block: 102,
+          timestamp: "2026-11-10 05:28:19 UTC",
+          event: "Corridor Dim Light Check",
+          snapshot: "88 BPM | 1.2G | 54 dB | 38 Lux",
+          score: 29,
+          previousHash: "c2c902d29a4319cb44d177e39e50eb88216d93efff618d01acb498ca8ba18262",
+          hash: "b4f991f11950187ea3edb716d7f74b1b7e2ecf343ed988a57c6ae08ab2672818"
+        },
+        {
+          block: 101,
+          timestamp: "2026-11-10 05:15:02 UTC",
+          event: "Commute Session Armed",
+          snapshot: "74 BPM | 1.0G | 45 dB | 90 Lux",
+          score: 12,
+          previousHash: "GENESIS",
+          hash: "c2c902d29a4319cb44d177e39e50eb88216d93efff618d01acb498ca8ba18262"
+        }
+      ],
+      telemetryHistory: {
+        labels: ['-25s', '-20s', '-15s', '-10s', '-5s', 'Now'],
+        threat: [12, 15, 14, 16, 15, 14],
+        bpm: [74, 75, 76, 77, 76, 76]
+      }
+    };
+
+    let telemetryChartInstance = null;
+    let audioCtx = null;
+
+    // Helper: Toast Notification
+    function showToast(message, icon = '✅') {
+      const banner = document.getElementById('toastBanner');
+      const iconEl = document.getElementById('toastIcon');
+      const msgEl = document.getElementById('toastMessage');
+      iconEl.textContent = icon;
+      msgEl.textContent = message;
+      banner.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        banner.classList.add('hidden');
+      }, 3600);
+    }
+
+    const evidenceStore = new AegisEvidenceLedger.EvidenceLedger(appState.evidenceLedger);
+
+    // Hashes are generated by Web Crypto SHA-256; no fallback toy hash is permitted.
+    async function appendEvidenceBlock(eventTitle) {
+      const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+      const snapshot = `${appState.heartRate} BPM | ${appState.gForce.toFixed(1)}G | ${appState.audioDb} dB | ${appState.lux} Lux`;
+      const entry = await evidenceStore.append({
+        timestamp,
+        event: String(eventTitle),
+        snapshot,
+        score: appState.threatScore
+      });
+      renderAll();
+      return entry;
+    }
+
+    function reportEvidenceError(error) {
+      console.error('Evidence hashing failed:', error);
+      showToast('Could not create a cryptographic hash. No ledger entry was added.', '⚠️');
+    }
+
+    // Synthesized Web Audio tone is local to this browser only.
+    function playAlertTone(isEmergency = false) {
+      if (!appState.sirenEnabled && !isEmergency) return;
+      try {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) audioCtx = new AudioContextClass();
+        }
+        if (!audioCtx) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(680, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(980, audioCtx.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.25);
+      } catch (e) {
+        // Ignore audio errors if blocked
+      }
+    }
+
+    // Compute AI Threat Score from Sensor Fusion
+    function recalculateThreatFusion(logIfCritical = true) {
+      const hrFactor = Math.max(0, Math.min(100, ((appState.heartRate - 65) / 105) * 100));
+      const gFactor = Math.max(0, Math.min(100, ((appState.gForce - 1.0) / 4.2) * 100));
+      const audioFactor = Math.max(0, Math.min(100, ((appState.audioDb - 45) / 60) * 100));
+      const darkFactor = Math.max(0, Math.min(100, ((100 - appState.lux) / 95) * 100));
+      const wakeBonus = appState.voiceWakeWord ? 35 : 0;
+
+      const rawScore = (hrFactor * 0.25) + (gFactor * 0.35) + (audioFactor * 0.22) + (darkFactor * 0.18) + wakeBonus;
+      appState.threatScore = Math.round(Math.max(4, Math.min(99, rawScore)));
+
+      // Update History
+      const nowLabel = new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' });
+      appState.telemetryHistory.labels.push(nowLabel);
+      appState.telemetryHistory.threat.push(appState.threatScore);
+      appState.telemetryHistory.bpm.push(appState.heartRate);
+      if (appState.telemetryHistory.labels.length > 8) {
+        appState.telemetryHistory.labels.shift();
+        appState.telemetryHistory.threat.shift();
+        appState.telemetryHistory.bpm.shift();
+      }
+
+      if (appState.threatScore >= 75 && logIfCritical && !appState.criticalIncidentLogged) {
+        appState.sosActive = true;
+        appState.criticalIncidentLogged = true;
+        appendEvidenceBlock('Demo SOS condition: high threat fusion (' + appState.threatScore + '%)')
+          .catch(reportEvidenceError);
+        playAlertTone(true);
+      } else if (appState.threatScore < 75) {
+        appState.criticalIncidentLogged = false;
+      }
+
+      renderAll();
+    }
+
+    // Render Top KPIs and Status
+    function renderKPIs() {
+      const score = appState.threatScore;
+      const kpiScoreEl = document.getElementById('kpiThreatScore');
+      const kpiLabelEl = document.getElementById('kpiThreatLabel');
+      const kpiBarEl = document.getElementById('kpiThreatBar');
+      const badgeEl = document.getElementById('globalStatusBadge');
+      const dotEl = document.getElementById('globalStatusDot');
+      const textEl = document.getElementById('globalStatusText');
+
+      kpiScoreEl.textContent = score + '%';
+      kpiBarEl.style.width = score + '%';
+
+      if (score >= 75 || appState.sosActive) {
+        kpiScoreEl.className = 'text-2xl sm:text-3xl font-extrabold text-rose-400';
+        kpiLabelEl.textContent = 'CRITICAL DEMO CONDITION';
+        kpiBarEl.className = 'bg-rose-500 h-full transition-all duration-300';
+        badgeEl.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/20 border border-rose-500/50 text-rose-200 text-xs font-bold pulse-ring';
+        dotEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-400';
+        textEl.textContent = `🚨 DEMO SOS CONDITION • ${score}% RISK (NOT SENT)`;
+      } else if (score >= 45) {
+        kpiScoreEl.className = 'text-2xl sm:text-3xl font-extrabold text-amber-400';
+        kpiLabelEl.textContent = 'Elevated Caution';
+        kpiBarEl.className = 'bg-amber-400 h-full transition-all duration-300';
+        badgeEl.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-semibold';
+        dotEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+        textEl.textContent = `⚠️ ELEVATED RISK (${score}%)`;
+      } else {
+        kpiScoreEl.className = 'text-2xl sm:text-3xl font-extrabold text-emerald-400';
+        kpiLabelEl.textContent = 'Low Risk';
+        kpiBarEl.className = 'bg-emerald-500 h-full transition-all duration-300';
+        badgeEl.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold';
+        dotEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+        textEl.textContent = `DEMO SIMULATION • ${score}% RISK`;
+      }
+
+      const heartRateEl = document.getElementById('kpiHeartRate');
+      const bpmUnit = document.createElement('span');
+      bpmUnit.className = 'text-sm font-normal text-slate-400';
+      bpmUnit.textContent = 'BPM';
+      heartRateEl.replaceChildren(document.createTextNode(String(appState.heartRate) + ' '), bpmUnit);
+      document.getElementById('kpiGForce').textContent = `${appState.gForce.toFixed(2)} G`;
+
+      const activeCount = appState.streetNodes.filter(n => n.active).length;
+      const avgLux = Math.round(appState.streetNodes.reduce((acc, n) => acc + (n.active ? n.lux : 6), 0) / appState.streetNodes.length);
+      document.getElementById('kpiActiveNodes').textContent = `${activeCount} / ${appState.streetNodes.length}`;
+      document.getElementById('kpiCorridorLux').textContent = `Avg Corridor Illumination: ${avgLux} Lux`;
+
+      document.getElementById('kpiEvidenceCount').textContent = String(appState.evidenceLedger.length);
+      document.getElementById('evidenceCountBadge').textContent = String(appState.evidenceLedger.length);
+    }
+
+    // Render Telemetry Controls & Chart
+    function renderTelemetryTab() {
+      document.getElementById('valHeartRate').textContent = `${appState.heartRate} BPM`;
+      document.getElementById('valGForce').textContent = `${appState.gForce.toFixed(1)} G`;
+      document.getElementById('valAudioDb').textContent = `${appState.audioDb} dB`;
+      document.getElementById('valLux').textContent = `${appState.lux} Lux`;
+
+      document.getElementById('sliderHeartRate').value = String(appState.heartRate);
+      document.getElementById('sliderGForce').value = String(Math.round(appState.gForce * 10));
+      document.getElementById('sliderAudioDb').value = String(appState.audioDb);
+      document.getElementById('sliderLux').value = String(appState.lux);
+
+      const wakeBtn = document.getElementById('toggleVoiceTriggerBtn');
+      if (appState.voiceWakeWord) {
+        wakeBtn.textContent = '🎙️ Demo Wake-word flag: ON (+35% score)';
+        wakeBtn.className = 'px-3 py-1.5 rounded-lg bg-rose-600 text-xs font-bold text-white border border-rose-400 transition';
+      } else {
+        wakeBtn.textContent = 'Demo Wake-word: Inactive';
+        wakeBtn.className = 'px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 transition';
+      }
+
+      const aiBadge = document.getElementById('aiDecisionBadge');
+      const aiExp = document.getElementById('aiFormulaExplanation');
+      if (appState.threatScore >= 75) {
+        aiBadge.textContent = 'Status: Demo threshold reached (not dispatched)';
+        aiBadge.className = 'text-xs font-bold text-rose-400';
+        aiExp.textContent = `CRITICAL ANOMALY: Multi-sensor spike detected (${appState.heartRate} BPM pulse + ${appState.gForce.toFixed(1)}G impact + ${appState.audioDb} dB acoustic level at ${appState.lux} Lux). This demo threshold was reached. No emergency packet was signed, transmitted, or sent to contacts.`;
+      } else if (appState.threatScore >= 45) {
+        aiBadge.textContent = 'Status: Demo caution threshold reached';
+        aiBadge.className = 'text-xs font-bold text-amber-400';
+        aiExp.textContent = `DEMO PRE-ALERT: the local rule-based score is ${appState.threatScore}%. No GPS polling or streetlight control is active.`;
+      } else {
+        aiBadge.textContent = 'Status: Demo monitoring';
+        aiBadge.className = 'text-xs font-semibold text-emerald-400';
+        aiExp.textContent = `Biometric pulse (${appState.heartRate} BPM) and motion (${appState.gForce.toFixed(1)}G) are within safe walking thresholds. Ambient lighting is ${appState.lux} Lux.`;
+      }
+
+      if (telemetryChartInstance) {
+        telemetryChartInstance.data.labels = [...appState.telemetryHistory.labels];
+        telemetryChartInstance.data.datasets[0].data = [...appState.telemetryHistory.threat];
+        telemetryChartInstance.data.datasets[1].data = [...appState.telemetryHistory.bpm];
+        telemetryChartInstance.update('none');
+      }
+    }
+
+    // Render Streetlight Mesh Canvas & Node List. Dynamic data is written with textContent.
+    function renderCorridorTab() {
+      const listEl = document.getElementById('nodeListContainer');
+      listEl.replaceChildren();
+
+      appState.streetNodes.forEach((node, idx) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs';
+        const details = document.createElement('div');
+        details.className = 'min-w-0';
+        const title = document.createElement('span');
+        title.className = 'font-semibold text-slate-200 break-words';
+        title.textContent = `${node.id}: ${node.name}`;
+        const status = document.createElement('p');
+        status.className = 'text-[11px] text-slate-400';
+        status.textContent = node.active ? `${node.lux} Lux • Online` : '8 Lux • Outage / Dark Zone';
+        details.append(title, status);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.nodeIdx = String(idx);
+        button.className = `node-toggle-btn shrink-0 px-2.5 py-1 rounded text-[11px] font-bold ${node.active ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}`;
+        button.textContent = node.active ? 'ON' : 'OFF';
+        row.append(details, button);
+        listEl.appendChild(row);
+      });
+
+      document.querySelectorAll('.node-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = Number(e.currentTarget.dataset.nodeIdx);
+          const target = appState.streetNodes[idx];
+          if (!target) return;
+          target.active = !target.active;
+          showToast(`${target.id} (${target.name}) switched ${target.active ? 'ONLINE' : 'OFFLINE'} in the demo.`, target.active ? '💡' : '⚠️');
+          renderAll();
+        });
+      });
+
+      const activeSafeNodes = appState.streetNodes.slice(0, 4).filter(n => n.active).length;
+      const safeScore = Math.round(60 + (activeSafeNodes / 4) * 36);
+      document.getElementById('safeRouteScore').textContent = `${safeScore}% Demo Score`;
+      drawMeshRadarCanvas();
+    }
+
+    function drawMeshRadarCanvas() {
+      const canvas = document.getElementById('meshRadarCanvas');
+      if (!canvas) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = Math.max(320, rect.width);
+      canvas.height = Math.max(280, rect.height);
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Subtle Urban Grid Lines
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      for (let x = 40; x < W; x += 48) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+      for (let y = 40; y < H; y += 48) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+
+      const startPt = { x: W * 0.10, y: H * 0.80 };
+      const endPt = { x: W * 0.88, y: H * 0.22 };
+
+      // Draw Shortest Dark Route
+      ctx.save();
+      ctx.strokeStyle = appState.routeMode === 'fast' ? '#f43f5e' : 'rgba(244, 63, 94, 0.35)';
+      ctx.lineWidth = appState.routeMode === 'fast' ? 4 : 2;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(startPt.x, startPt.y);
+      ctx.lineTo(W * appState.streetNodes[4].x, H * appState.streetNodes[4].y);
+      ctx.lineTo(W * appState.streetNodes[5].x, H * appState.streetNodes[5].y);
+      ctx.lineTo(endPt.x, endPt.y);
+      ctx.stroke();
+      ctx.restore();
+
+      // Draw Illustrative Safe-Lit Route
+      ctx.save();
+      ctx.strokeStyle = appState.routeMode === 'safe' ? '#10b981' : 'rgba(16, 185, 129, 0.35)';
+      ctx.lineWidth = appState.routeMode === 'safe' ? 4.5 : 2;
+      ctx.beginPath();
+      ctx.moveTo(startPt.x, startPt.y);
+      appState.streetNodes.slice(0, 4).forEach(n => {
+        ctx.lineTo(W * n.x, H * n.y);
+      });
+      ctx.lineTo(endPt.x, endPt.y);
+      ctx.stroke();
+      ctx.restore();
+
+      // Draw Streetlight Nodes
+      appState.streetNodes.forEach(node => {
+        const nx = W * node.x;
+        const ny = H * node.y;
+
+        // Illumination Halo
+        const grad = ctx.createRadialGradient(nx, ny, 4, nx, ny, node.active ? 44 : 18);
+        if (node.active) {
+          grad.addColorStop(0, 'rgba(34, 211, 238, 0.38)');
+          grad.addColorStop(1, 'rgba(34, 211, 238, 0)');
+        } else {
+          grad.addColorStop(0, 'rgba(244, 63, 94, 0.35)');
+          grad.addColorStop(1, 'rgba(244, 63, 94, 0)');
+        }
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(nx, ny, node.active ? 44 : 18, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Node Core
+        ctx.fillStyle = node.active ? '#22d3ee' : '#f43f5e';
+        ctx.beginPath();
+        ctx.arc(nx, ny, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '600 11px Inter, sans-serif';
+        ctx.fillText(`${node.id} (${node.active ? node.lux + ' lx' : 'OUTAGE'})`, nx - 28, ny - 12);
+      });
+
+      // Draw Start & Destination Markers
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(startPt.x, startPt.y, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 11px Inter, sans-serif';
+      ctx.fillText('START (Campus)', startPt.x - 16, startPt.y + 22);
+
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath(); ctx.arc(endPt.x, endPt.y, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('HOME (Safe Haven)', endPt.x - 65, endPt.y - 14);
+    }
+
+    // Render contact list and demo payload using safe DOM text nodes.
+    function renderGuardiansTab() {
+      const container = document.getElementById('guardiansList');
+      container.replaceChildren();
+
+      appState.guardians.forEach((g, idx) => {
+        const card = document.createElement('div');
+        card.className = 'p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2';
+        const details = document.createElement('div');
+        details.className = 'min-w-0';
+        const titleRow = document.createElement('div');
+        titleRow.className = 'flex flex-wrap items-center gap-2';
+        const name = document.createElement('span');
+        name.className = 'text-xs font-bold text-white break-words';
+        name.textContent = g.name;
+        const relation = document.createElement('span');
+        relation.className = 'text-[11px] px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300 font-medium break-words';
+        relation.textContent = g.relation;
+        titleRow.append(name, relation);
+        const contact = document.createElement('p');
+        contact.className = 'text-xs text-slate-400 mt-0.5 break-words';
+        contact.textContent = `${g.phone} • ${g.status}`;
+        details.append(titleRow, contact);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.dataset.removeGuardian = String(idx);
+        removeBtn.className = 'remove-guardian-btn shrink-0 text-xs text-slate-400 hover:text-rose-400 px-2 py-1';
+        removeBtn.textContent = 'Remove';
+        card.append(details, removeBtn);
+        container.appendChild(card);
+      });
+
+      document.querySelectorAll('.remove-guardian-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = Number(e.currentTarget.dataset.removeGuardian);
+          if (appState.guardians.length <= 1) {
+            showToast('At least 1 demo contact must remain in the sample list.', '⚠️');
+            return;
+          }
+          const removed = appState.guardians.splice(idx, 1)[0];
+          showToast(`Removed ${removed.name} from the demo contact list.`, '🗑️');
+          renderAll();
+        });
+      });
+
+      const latestBlock = appState.evidenceLedger[0] || { hash: 'N/A', timestamp: 'Now' };
+      const payloadText = [
+        `[AEGISHER DEMO ALERT PREVIEW]`,
+        `Contact Group: Sample contacts only`,
+        `Status: ${appState.sosActive || appState.threatScore >= 75 ? 'DEMO SOS CONDITION ACTIVE — NOT SENT' : 'SIMULATION PREVIEW'}`,
+        `Demo Threat Score: ${appState.threatScore}%`,
+        `Simulated Inputs: Heart Rate ${appState.heartRate} BPM | Motion ${appState.gForce.toFixed(1)}G | Audio Level ${appState.audioDb} dB`,
+        `Sample coordinates only: 24.8949° N, 91.8687° E (not read from GPS or shared)`,
+        `Illustrative Route Mode: ${appState.routeMode === 'safe' ? 'Demo Safe-Lit Scenario' : 'Demo Shortest-Route Scenario'}`,
+        `Sample Contacts (${appState.guardians.length}): ${appState.guardians.map(g => g.name).join(', ')}`,
+        `Local SHA-256 Demo Hash: ${latestBlock.hash.slice(0, 32)}...`,
+        `No call, message, location share, or responder dispatch has occurred.`
+      ].join('\n');
+
+      document.getElementById('sosPayloadPreview').textContent = payloadText;
+      const pill = document.getElementById('dispatchStatusPill');
+      pill.textContent = appState.sosActive || appState.threatScore >= 75
+        ? 'DEMO CONDITION — NOT SENT'
+        : 'Demo preview — no dispatch';
+      pill.className = 'text-xs px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-200 border border-amber-500/40 font-semibold';
+    }
+
+    // Render Evidence Ledger Table without interpreting ledger values as HTML.
+    function renderEvidenceTab() {
+      const tbody = document.getElementById('evidenceTableBody');
+      tbody.replaceChildren();
+
+      appState.evidenceLedger.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/40 transition';
+        const badgeColor = item.score >= 75
+          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+          : item.score >= 45
+            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+        const cells = [
+          { text: `#${item.block}`, className: 'py-3 px-3 font-mono font-bold text-purple-300' },
+          { text: item.timestamp, className: 'py-3 px-3 text-slate-300 timestamp-cell' },
+          { text: item.event, className: 'py-3 px-3 font-semibold text-white' },
+          { text: item.snapshot, className: 'py-3 px-3 text-slate-400 font-mono text-[11px]' },
+          { text: `${item.score}%`, className: 'py-3 px-3 text-right' },
+          { text: `${item.hash.slice(0, 24)}...`, className: 'py-3 px-3 font-mono text-[11px] text-cyan-300 hash-cell' }
+        ];
+        cells.forEach((cell, index) => {
+          const td = document.createElement('td');
+          td.className = cell.className;
+          if (index === 4) {
+            const span = document.createElement('span');
+            span.className = `px-2 py-0.5 rounded border text-[11px] font-bold ${badgeColor}`;
+            span.textContent = cell.text;
+            td.appendChild(span);
+          } else {
+            td.textContent = cell.text;
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderAll() {
+      renderKPIs();
+      renderTelemetryTab();
+      renderCorridorTab();
+      renderGuardiansTab();
+      renderEvidenceTab();
+    }
+
+    // Initialize Chart.js
+    function initChart() {
+      const ctx = document.getElementById('telemetryChart').getContext('2d');
+      telemetryChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [...appState.telemetryHistory.labels],
+          datasets: [
+            {
+              label: 'AI Threat Score (%)',
+              data: [...appState.telemetryHistory.threat],
+              borderColor: '#f43f5e',
+              backgroundColor: 'rgba(244, 63, 94, 0.15)',
+              borderWidth: 2.5,
+              fill: true,
+              tension: 0.35
+            },
+            {
+              label: 'Heart Rate (BPM)',
+              data: [...appState.telemetryHistory.bpm],
+              borderColor: '#38bdf8',
+              backgroundColor: 'transparent',
+              borderWidth: 2,
+              borderDash: [4, 4],
+              tension: 0.35
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#cbd5e1', font: { family: 'Inter', size: 11 } }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#94a3b8', font: { size: 10 } },
+              grid: { color: 'rgba(148, 163, 184, 0.08)' }
+            },
+            y: {
+              min: 0,
+              max: 190,
+              ticks: { color: '#94a3b8', font: { size: 10 } },
+              grid: { color: 'rgba(148, 163, 184, 0.08)' }
+            }
+          }
+        }
+      });
+    }
+
+    // Copy helper with fallback
+    function copyTextToClipboard(text, successMsg) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(successMsg, '📋');
+        }).catch(() => {
+          fallbackCopy(text, successMsg);
+        });
+      } else {
+        fallbackCopy(text, successMsg);
+      }
+    }
+
+    function fallbackCopy(text, successMsg) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast(successMsg, '📋');
+      } catch (e) {
+        showToast('Copied to buffer.', '📋');
+      }
+      document.body.removeChild(ta);
+    }
+
+    // Wire All Event Listeners on Load
+    window.addEventListener('DOMContentLoaded', () => {
+      initChart();
+      renderAll();
+
+      // Tab Switching
+      document.querySelectorAll('.nav-tab').forEach(tabBtn => {
+        tabBtn.addEventListener('click', (e) => {
+          const targetTab = e.currentTarget.getAttribute('data-tab');
+          appState.activeTab = targetTab;
+
+          document.querySelectorAll('.nav-tab').forEach(b => {
+            if (b.getAttribute('data-tab') === targetTab) {
+              b.className = 'nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition whitespace-nowrap';
+            } else {
+              b.className = 'nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 transition whitespace-nowrap';
+            }
+          });
+
+          document.querySelectorAll('.tab-panel').forEach(panel => {
+            panel.classList.add('hidden');
+          });
+          document.getElementById(`tab-${targetTab}`).classList.remove('hidden');
+
+          if (targetTab === 'corridor') {
+            drawMeshRadarCanvas();
+          }
+        });
+      });
+
+      // Sliders
+      document.getElementById('sliderHeartRate').addEventListener('input', (e) => {
+        appState.heartRate = Number(e.target.value);
+        recalculateThreatFusion(true);
+      });
+      document.getElementById('sliderGForce').addEventListener('input', (e) => {
+        appState.gForce = Number(e.target.value) / 10;
+        recalculateThreatFusion(true);
+      });
+      document.getElementById('sliderAudioDb').addEventListener('input', (e) => {
+        appState.audioDb = Number(e.target.value);
+        recalculateThreatFusion(true);
+      });
+      document.getElementById('sliderLux').addEventListener('input', (e) => {
+        appState.lux = Number(e.target.value);
+        recalculateThreatFusion(true);
+      });
+
+      // Wake Word Toggle
+      document.getElementById('toggleVoiceTriggerBtn').addEventListener('click', () => {
+        appState.voiceWakeWord = !appState.voiceWakeWord;
+        recalculateThreatFusion(true);
+        showToast(appState.voiceWakeWord ? 'Demo wake-word flag enabled (no audio recognition is running).' : 'Demo wake-word flag cleared.', '🎙️');
+      });
+
+      // Scenario Presets
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const preset = e.currentTarget.getAttribute('data-preset');
+          if (preset === 'normal') {
+            appState.heartRate = 76;
+            appState.gForce = 1.0;
+            appState.audioDb = 48;
+            appState.lux = 85;
+            appState.voiceWakeWord = false;
+            appState.sosActive = false;
+            recalculateThreatFusion(false);
+            showToast('Scenario Loaded: Normal Safe Commute (14% Risk)', '🟢');
+          } else if (preset === 'stalking') {
+            appState.heartRate = 128;
+            appState.gForce = 2.1;
+            appState.audioDb = 66;
+            appState.lux = 14;
+            appState.voiceWakeWord = false;
+            appState.sosActive = false;
+            recalculateThreatFusion(false);
+            showToast('Scenario Loaded: Unlit Street + Elevated Pulse (Pre-Alert Mode)', '🟡');
+          } else if (preset === 'impact') {
+            appState.heartRate = 164;
+            appState.gForce = 4.8;
+            appState.audioDb = 98;
+            appState.lux = 10;
+            appState.voiceWakeWord = true;
+            appState.sosActive = true;
+            recalculateThreatFusion(true);
+            showToast('Demo scenario: critical impact + wake-word condition; no alert was sent.', '🚨');
+          }
+        });
+      });
+
+      // Browser DeviceMotion API: permission-aware, bounded listener; no synthetic fallback.
+      document.getElementById('deviceMotionBtn').addEventListener('click', async () => {
+        if (!('DeviceMotionEvent' in window)) {
+          showToast('This browser does not expose DeviceMotion. The demo values were not changed.', '⚠️');
+          return;
+        }
+
+        if (typeof window.DeviceMotionEvent.requestPermission === 'function') {
+          try {
+            const permission = await window.DeviceMotionEvent.requestPermission();
+            if (permission !== 'granted') {
+              showToast('Motion permission was not granted. No sensor data was read.', '⚠️');
+              return;
+            }
+          } catch (error) {
+            showToast('Motion permission request failed. No sensor data was read.', '⚠️');
+            return;
+          }
+        }
+
+        let captured = false;
+        const cleanup = () => {
+          window.clearTimeout(timeoutId);
+          window.removeEventListener('devicemotion', handler);
+        };
+        const handler = (event) => {
+          const acc = event.accelerationIncludingGravity;
+          if (!acc || ![acc.x, acc.y, acc.z].every(Number.isFinite)) return;
+          captured = true;
+          cleanup();
+          const totalG = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2) / 9.80665;
+          appState.gForce = Math.max(1.0, Math.min(6.0, totalG));
+          recalculateThreatFusion(true);
+          showToast(`Browser motion reading: ${appState.gForce.toFixed(2)}G`, '📱');
+        };
+        const timeoutId = window.setTimeout(() => {
+          if (!captured) {
+            cleanup();
+            showToast('No motion event arrived within 3 seconds. Demo values were left unchanged.', '⚠️');
+          }
+        }, 3000);
+        window.addEventListener('devicemotion', handler);
+        showToast('Waiting up to 3 seconds for a browser motion reading…', '📱');
+      });
+
+      // Manual Snapshot to Ledger
+      document.getElementById('logSnapshotBtn').addEventListener('click', async () => {
+        try {
+          await appendEvidenceBlock('Manual demo sensor hash');
+          showToast('Added a SHA-256 hash to the local demo ledger.', '🔒');
+        } catch (error) { reportEvidenceError(error); }
+      });
+
+      document.getElementById('manualRecordEvidenceBtn').addEventListener('click', async () => {
+        try {
+          await appendEvidenceBlock('User demo checkpoint hash');
+          showToast('New SHA-256 hash added to the local demo ledger.', '🔒');
+        } catch (error) { reportEvidenceError(error); }
+      });
+
+      // Instant SOS Button
+      document.getElementById('instantSosBtn').addEventListener('click', () => {
+        appState.sosActive = !appState.sosActive;
+        if (appState.sosActive) {
+          appState.heartRate = Math.max(appState.heartRate, 152);
+          appState.gForce = Math.max(appState.gForce, 3.9);
+          appState.voiceWakeWord = true;
+          recalculateThreatFusion(true);
+          showToast('Demo SOS condition triggered. No guardians were contacted.', '🚨');
+        } else {
+          appState.voiceWakeWord = false;
+          appState.heartRate = 78;
+          appState.gForce = 1.0;
+          recalculateThreatFusion(false);
+          showToast('Demo SOS condition cleared.', '✅');
+        }
+      });
+
+      // Audio Beacon Toggle
+      document.getElementById('audioBeaconBtn').addEventListener('click', () => {
+        appState.sirenEnabled = !appState.sirenEnabled;
+        document.getElementById('audioBeaconLabel').textContent = appState.sirenEnabled ? '🔊 Local Tone On' : '🔇 Local Tone Off';
+        if (appState.sirenEnabled) {
+          playAlertTone(true);
+          showToast('Local browser tone enabled; no external siren is activated.', '🔊');
+        } else {
+          showToast('Local browser tone muted.', '🔇');
+        }
+      });
+
+      // Route Mode Buttons
+      document.getElementById('routeModeSafeBtn').addEventListener('click', () => {
+        appState.routeMode = 'safe';
+        document.getElementById('routeModeSafeBtn').className = 'px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold transition';
+        document.getElementById('routeModeFastBtn').className = 'px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-semibold transition';
+        drawMeshRadarCanvas();
+        renderGuardiansTab();
+        showToast('Switched to the illustrative safe-route scenario; no live route or coverage is verified.', '🛡️');
+      });
+
+      document.getElementById('routeModeFastBtn').addEventListener('click', () => {
+        appState.routeMode = 'fast';
+        document.getElementById('routeModeFastBtn').className = 'px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold transition';
+        document.getElementById('routeModeSafeBtn').className = 'px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-semibold transition';
+        drawMeshRadarCanvas();
+        renderGuardiansTab();
+        showToast('Demo warning: the illustrative shortest route crosses a sample dark zone.', '⚠️');
+      });
+
+      // Click on Radar Canvas to Toggle Nearest Streetlight Node
+      const radarCanvas = document.getElementById('meshRadarCanvas');
+      radarCanvas.addEventListener('click', (e) => {
+        const rect = radarCanvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        const W = radarCanvas.width;
+        const H = radarCanvas.height;
+
+        let closestNode = null;
+        let minDist = 42;
+        appState.streetNodes.forEach(node => {
+          const dx = (W * node.x) - clickX;
+          const dy = (H * node.y) - clickY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < minDist) {
+            minDist = dist;
+            closestNode = node;
+          }
+        });
+
+        if (closestNode) {
+          closestNode.active = !closestNode.active;
+          showToast(`Toggled ${closestNode.id} (${closestNode.name}) ${closestNode.active ? 'ON' : 'OFF'}.`, '💡');
+          renderAll();
+        }
+      });
+
+      // Boost All Streetlights Button
+      document.getElementById('boostStreetlightsBtn').addEventListener('click', () => {
+        appState.streetNodes.forEach(n => {
+          n.active = true;
+          n.lux = Math.max(n.lux, 110);
+        });
+        appState.lux = 110;
+        recalculateThreatFusion(false);
+        showToast('Simulated all 6 sample streetlights at 110+ Lux; no hardware command was sent.', '💡');
+      });
+
+      // Add Guardian Form
+      document.getElementById('addGuardianForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nameInput = document.getElementById('inputGuardianName');
+        const relInput = document.getElementById('inputGuardianRelation');
+        const phoneInput = document.getElementById('inputGuardianPhone');
+        if (!nameInput.value.trim()) return;
+
+        appState.guardians.push({
+          id: Date.now(),
+          name: nameInput.value.trim(),
+          relation: relInput.value.trim() || 'Trusted Contact',
+          phone: phoneInput.value.trim() || 'Not configured',
+          status: 'Demo only'
+        });
+
+        nameInput.value = '';
+        relInput.value = '';
+        phoneInput.value = '';
+        renderAll();
+        showToast('Added a sample contact to the local demo list.', '👥');
+      });
+
+      // Copy SOS Payload
+      document.getElementById('copySosPayloadBtn').addEventListener('click', () => {
+        const text = document.getElementById('sosPayloadPreview').textContent;
+        copyTextToClipboard(text, 'Demo payload preview copied to clipboard.');
+      });
+
+      // Copy Evidence JSON
+      document.getElementById('exportEvidenceJsonBtn').addEventListener('click', () => {
+        const jsonStr = JSON.stringify(appState.evidenceLedger, null, 2);
+        copyTextToClipboard(jsonStr, 'Demo evidence JSON copied to clipboard.');
+      });
+
+      // Fake Deterrent Call Modal
+      document.getElementById('simulateFakeCallBtn').addEventListener('click', () => {
+        playAlertTone(true);
+        document.getElementById('fakeCallModal').classList.remove('hidden');
+      });
+      document.getElementById('closeFakeCallBtn').addEventListener('click', () => {
+        document.getElementById('fakeCallModal').classList.add('hidden');
+        showToast('Closed the scripted demo call screen. No call or recording occurred.', '📞');
+      });
+
+      window.addEventListener('resize', () => {
+        if (appState.activeTab === 'corridor') {
+          drawMeshRadarCanvas();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
